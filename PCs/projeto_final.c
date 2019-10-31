@@ -7,7 +7,6 @@
 #include<json-c/json.h>
 #include <string.h>
 #include <stdint.h>
-#include<json-c/json.h>
 
 
 
@@ -17,86 +16,76 @@ volatile int varCompartilhada=0;
 
 static pthread_mutex_t mutexLock;
 
-
-
 struct json_struct
 {
-  int number;
-  char name[50];       // Declaring an array will allocate the specified
+  int updat_id;
+  int valid;
+  char msg[50];       // Declaring an array will allocate the specified
+
 };
 
 
 struct json_struct dados_json()
-{
+{	
 	struct json_struct js;
 	FILE *fp;
-	char buffer[1024]; 
-	//static char buffer2[1024];
+	char buffer[2048];
 	struct json_object *parsed_json;
-	struct json_object *message;
+	struct json_object *result;  
+	struct json_object *result_n;
+	struct json_object *update_id;
 	struct json_object *text;
-	struct json_object *chat;
-	struct json_object *message_id;
+	struct json_object *message;
+	size_t i;	
 
-	fp = fopen("test2.json","r");
-//	if(fp == NULL) // testa se o arquivo foi aberto com sucesso
-//	 {
-//	 printf("\n\nImpossivel abrir o arquivo!\n\n");
-//	 return 0
-//	 }
-
-
-	fread(buffer, 1024, 1, fp);
+	fp = fopen("/home/bruno/codigos_exemplos/api.telegram.org/bot961579878:AAG4cVhRDowO13ZJ1vRm-3DHSiukfzQN2U8/getUpdates","r");
+	fread(buffer, 2048, 1, fp);
 	fclose(fp);
 
 	parsed_json = json_tokener_parse(buffer);
-	json_object_object_get_ex(parsed_json, "message", &message);
-
-	json_object_object_get_ex(message, "message_id", &message_id);
-	json_object_object_get_ex(message, "text", &text);
+	json_object_object_get_ex(parsed_json, "result", &result);
+	i=json_object_array_length(result);           //Num de indices do array result
 	
-	strcpy(js.name,json_object_get_string(text));
-	js.number=json_object_get_int(message_id);
+
+
+	if(i>0)
+	{
+		result_n=json_object_array_get_idx(result,i-1); //pegamos o ultimo array
+
+		json_object_object_get_ex(result_n, "update_id", &update_id);
+		json_object_object_get_ex(result_n, "message", &message);	
+		json_object_object_get_ex(message, "text", &text);
+	    strcpy(js.msg,json_object_get_string(text));
+		js.updat_id=json_object_get_int(update_id);
+	}
+	js.valid=i;
 return js;
 }
-
-
-
-
 // Função que incrementa o Contador
 void* bot_data_RT (void *arg)
 {
 
 
-//	printf("text %s - message_id %d\n",json_dados.name,json_dados.number);
+
 	system("wget -r -P /home/bruno/codigos_exemplos/  https://api.telegram.org/bot961579878:AAG4cVhRDowO13ZJ1vRm-3DHSiukfzQN2U8/getUpdates");
-	system("tail -n1 /home/bruno/codigos_exemplos/api.telegram.org/bot961579878:AAG4cVhRDowO13ZJ1vRm-3DHSiukfzQN2U8/getUpdates > test.json");
-	system("sed '1s/^/{/' test.json > test2.json");
 
+	struct json_struct json_dados;
+    char linha2[200],off_set[200],off_set_rm[200],temp[]="/temp",foto[]="/retrato",bomba[]="/agua",comandos[]="/comandos";
+    int i=8000,updat_id1=0,updat_id2=1;
 
-
-
-struct json_struct json_dados;
-  char linha2[200],temp[]="/temp",foto[]="/retrato",bomba[]="/agua",comandos[]="/comandos";
-  int i=8000,msg_id1=0,msg_id2=1;
-
-  json_dados=dados_json();
-  msg_id2=json_dados.number;
-  printf("id é %d\n", msg_id2 );
+    json_dados=dados_json();
+    updat_id2=json_dados.updat_id;
 while(1)
 	{	
 	printf("Baixando Site\n");
 	system("wget -r -P /home/bruno/codigos_exemplos/  https://api.telegram.org/bot961579878:AAG4cVhRDowO13ZJ1vRm-3DHSiukfzQN2U8/getUpdates");
-	system("tail -n1 /home/bruno/codigos_exemplos/api.telegram.org/bot961579878:AAG4cVhRDowO13ZJ1vRm-3DHSiukfzQN2U8/getUpdates > test.json");
-	system("sed '1s/^/{/' test.json > test2.json");
-
 
 	json_dados=dados_json();
-	msg_id1=json_dados.number;
-	if(msg_id1!=msg_id2)
+	updat_id1=json_dados.updat_id;
+	if((updat_id1!=updat_id2) && (json_dados.valid>0))
 	{
 	    	printf("Comando recebido do bot\n");
-	 		if (strcmp(temp,json_dados.name)==0)
+	 		if (strcmp(temp,json_dados.msg)==0)
 	 		{
 	 			
 	 			printf("Mande a temperatura\n");
@@ -105,37 +94,40 @@ while(1)
 	 		
 	 		}
 	
-	 		if(strcmp(foto,json_dados.name)==0)
+	 		if(strcmp(foto,json_dados.msg)==0)
 	 		{
-
+	 			system("fswebcam -d /dev/video2 foto.jpg");
 	 			system("curl -X POST https://api.telegram.org/bot961579878:AAG4cVhRDowO13ZJ1vRm-3DHSiukfzQN2U8/sendPhoto? -F chat_id=658446605 -F photo=@/home/bruno/codigos_exemplos/foto.jpg");
 
 	 		}
 
-	  		if(strcmp(bomba,json_dados.name)==0)
+	  		if(strcmp(bomba,json_dados.msg)==0)
 	 		{
 
 	 			system("curl -s -X POST https://api.telegram.org/bot961579878:AAG4cVhRDowO13ZJ1vRm-3DHSiukfzQN2U8/sendMessage -d chat_id=658446605 -d text='Recipiente Cheio'");
 
 	 		}
-	 		if(strcmp(comandos,json_dados.name)==0)
+	 		if(strcmp(comandos,json_dados.msg)==0)
 	 		{
 
 	 			system("curl -s -X POST https://api.telegram.org/bot961579878:AAG4cVhRDowO13ZJ1vRm-3DHSiukfzQN2U8/sendMessage -d chat_id=658446605 -d text='Ola :) Os comandos da sua DOGhouse são \n /temp: Informa a temperatura da casinha \n /retrato: Tira uma foto do interior da casinha \n /agua: Enche o recipiente de agua do cachorro'");
+	 		
+	 		}
+	 		if(json_dados.valid>10)
+	 		{
+	 			sprintf(off_set,"wget -r -P /home/bruno/codigos_exemplos/  https://api.telegram.org/bot961579878:AAG4cVhRDowO13ZJ1vRm-3DHSiukfzQN2U8/getUpdates?offset=%d",updat_id1+1);
+	 			system(off_set);
+	 			sprintf(off_set_rm,"rm /home/bruno/codigos_exemplos/api.telegram.org/bot961579878:AAG4cVhRDowO13ZJ1vRm-3DHSiukfzQN2U8/'getUpdates?offset=%d'",updat_id1+1);
+	 			system(off_set_rm);
 
 	 		}
-		
 
-
-	 
 	}
-	msg_id2=msg_id1;	  
+
+	updat_id2=updat_id1;	  
 	sleep(2);
    }
-
-
-
-	return NULL;
+return NULL;
 }
 
 // Função que decrementa o Contador
@@ -156,11 +148,6 @@ int main (int argc, char** argv)
 	pthread_t t0;
 	pthread_t t1;
 
-	printf("Este exemplo eh igual ao anterior, exceto pelo uso de um MUTEX\n");
-	printf("para evitar a concorrencia entre as threads.\n");
-	printf("Execute o codigo varias vezes para ver o valor final de 'varCompartilhada'.\n\n");
-	printf("Valor inicial: %d\n", varCompartilhada);
-	
 	pthread_mutex_init(&mutexLock, NULL);
 	pthread_create(&t0, NULL, bot_data_RT, NULL);
 	pthread_create(&t1, NULL, DATA_GET, NULL);
